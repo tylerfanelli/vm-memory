@@ -428,6 +428,7 @@ impl<B: Bitmap> VolatileMemory for MmapRegion<B> {
                     self.addr.add(offset),
                     count,
                     self.bitmap.slice_at(offset),
+                    None,
                 )
             },
         )
