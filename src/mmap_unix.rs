@@ -144,6 +144,7 @@ impl<B: Bitmap> MmapRegionBuilder<B> {
             (-1, 0)
         };
 
+        #[cfg(not(miri))]
         // SAFETY: This is safe because we're not allowing MAP_FIXED, and invalid parameters
         // cannot break Rust safety guarantees (things may change if we're mapping /dev/mem or
         // some wacky file).
@@ -158,9 +159,21 @@ impl<B: Bitmap> MmapRegionBuilder<B> {
             )
         };
 
+        #[cfg(not(miri))]
         if addr == libc::MAP_FAILED {
             return Err(Error::Mmap(io::Error::last_os_error()));
         }
+
+        #[cfg(miri)]
+        if self.size == 0 {
+            return Err(Error::Mmap(io::Error::from_raw_os_error(libc::EINVAL)));
+        }
+
+        // Miri does not support the mmap syscall, so we use rust's allocator for miri tests
+        #[cfg(miri)]
+        let addr = unsafe {
+            std::alloc::alloc_zeroed(std::alloc::Layout::from_size_align(self.size, 8).unwrap())
+        };
 
         Ok(MmapRegion {
             addr: addr as *mut u8,
@@ -429,7 +442,14 @@ impl<B> Drop for MmapRegion<B> {
             // SAFETY: This is safe because we mmap the area at addr ourselves, and nobody
             // else is holding a reference to it.
             unsafe {
+                #[cfg(not(miri))]
                 libc::munmap(self.addr as *mut libc::c_void, self.size);
+
+                #[cfg(miri)]
+                std::alloc::dealloc(
+                    self.addr,
+                    std::alloc::Layout::from_size_align(self.size, 8).unwrap(),
+                );
             }
         }
     }
@@ -516,6 +536,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(miri))] // Miri cannot mmap files
     fn test_mmap_region_from_file() {
         let mut f = TempFile::new().unwrap().into_file();
         let offset: usize = 0;
@@ -534,6 +555,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(miri))] // Miri cannot mmap files
     fn test_mmap_region_build() {
         let a = Arc::new(TempFile::new().unwrap().into_file());
 
@@ -604,6 +626,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(miri))] // Causes warnings due to the pointer casts
     fn test_mmap_region_build_raw() {
         let addr = 0;
         let size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) as usize };
@@ -622,6 +645,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(miri))] // Miri cannot mmap files
     fn test_mmap_region_fds_overlap() {
         let a = Arc::new(TempFile::new().unwrap().into_file());
         assert_eq!(unsafe { libc::ftruncate(a.as_raw_fd(), 1024 * 10) }, 0);
