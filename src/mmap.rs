@@ -293,6 +293,7 @@ impl<B: Bitmap> Bytes<MemoryRegionAddress> for GuestRegionMmap<B> {
         F: Read,
     {
         let maddr = addr.raw_value() as usize;
+        #[allow(deprecated)] // function itself is deprecated
         self.as_volatile_slice()
             .unwrap()
             .read_from::<F>(maddr, src, count)
@@ -338,6 +339,7 @@ impl<B: Bitmap> Bytes<MemoryRegionAddress> for GuestRegionMmap<B> {
         F: Read,
     {
         let maddr = addr.raw_value() as usize;
+        #[allow(deprecated)] // function itself is deprecated
         self.as_volatile_slice()
             .unwrap()
             .read_exact_from::<F>(maddr, src, count)
@@ -383,6 +385,7 @@ impl<B: Bitmap> Bytes<MemoryRegionAddress> for GuestRegionMmap<B> {
         F: Write,
     {
         let maddr = addr.raw_value() as usize;
+        #[allow(deprecated)] // function itself is deprecated
         self.as_volatile_slice()
             .unwrap()
             .write_to::<F>(maddr, dst, count)
@@ -428,6 +431,7 @@ impl<B: Bitmap> Bytes<MemoryRegionAddress> for GuestRegionMmap<B> {
         F: Write,
     {
         let maddr = addr.raw_value() as usize;
+        #[allow(deprecated)] // function itself is deprecated
         self.as_volatile_slice()
             .unwrap()
             .write_all_to::<F>(maddr, dst, count)
@@ -1205,7 +1209,7 @@ mod tests {
                 File::open(Path::new("c:\\Windows\\system32\\ntoskrnl.exe")).unwrap()
             };
             gm.write_obj(!0u32, addr).unwrap();
-            gm.read_exact_from(addr, &mut file, mem::size_of::<u32>())
+            gm.read_exact_volatile_from(addr, &mut file, mem::size_of::<u32>())
                 .unwrap();
             let value: u32 = gm.read_obj(addr).unwrap();
             if cfg!(unix) {
@@ -1214,8 +1218,8 @@ mod tests {
                 assert_eq!(value, 0x0090_5a4d);
             }
 
-            let mut sink = Vec::new();
-            gm.write_all_to(addr, &mut sink, mem::size_of::<u32>())
+            let mut sink = vec![0; mem::size_of::<u32>()];
+            gm.write_all_volatile_to(addr, &mut sink.as_mut_slice(), mem::size_of::<u32>())
                 .unwrap();
             if cfg!(unix) {
                 assert_eq!(sink, vec![0; mem::size_of::<u32>()]);
