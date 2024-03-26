@@ -19,8 +19,6 @@ use crate::bitmap::{Bitmap, BS};
 use crate::guest_memory::FileOffset;
 use crate::mmap::{check_file_offset, AsSlice, NewBitmap};
 use crate::volatile_memory::{self, compute_offset, VolatileMemory, VolatileSlice};
-use crate::mmap::{check_file_offset, NewBitmap};
-use crate::volatile_memory::{self, VolatileMemory, VolatileSlice};
 
 /// Error conditions that may arise when creating a new `MmapRegion` object.
 #[derive(Debug, thiserror::Error)]
