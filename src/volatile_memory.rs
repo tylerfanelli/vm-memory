@@ -297,6 +297,12 @@ impl<'a> From<&'a mut [u8]> for VolatileSlice<'a, ()> {
     }
 }
 
+impl<'a> From<VolatileSlice<'a, ()>> for &'a [u8] {
+    fn from(value: VolatileSlice<'a, ()>) -> Self {
+        unsafe { std::slice::from_raw_parts(value.addr, value.size) }
+    }
+}
+
 #[repr(C, packed)]
 struct Packed<T>(T);
 
@@ -1979,6 +1985,16 @@ mod tests {
         v_ref.copy_from(&a[..]);
         assert_eq!(c_ref[0..4], a[0..4]);
         assert_eq!(c_ref[4], 0);
+    }
+
+    #[test]
+    fn slice_from_volatile() {
+        let mut a = [2u8, 4, 6, 8, 10];
+        let b = a.clone();
+        let v_ref = VolatileSlice::from(&mut a[..]);
+        let c: &[u8] = v_ref.into();
+
+        assert_eq!(b, c);
     }
 
     #[test]
